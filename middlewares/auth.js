@@ -9,12 +9,9 @@ const auth = (req, res, next) => {
             const user = jwt.verify(token, process.env.SECRET_KEY);
             req.user = user;
         } catch (error) {
-            res.status(401).json({ message: 'No autorizado' });
-            return next();        
+            console.log(error);
         }
     }
-    
-    // res.status(401).json({ message: 'No autorizado' });
     return next();    
 }
 
