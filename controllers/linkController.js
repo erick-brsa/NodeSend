@@ -47,6 +47,40 @@ export const createLink = async (req, res, next) => {
     } catch (error) {
         console.log(error);        
     }
+};
+
+// Obtener el enlace
+export const getLink = async (req, res, next) => {
+
+    // Verificar si el enlace existe
+    const { url } = req.params;
+
+    const link = await Link.findOne({ url });
+
+    if (!link) {
+        res.status(404).json({ message: 'El enlace no existe' });
+        return next();
+    }
+
+    // Si el enlace existe
+    const { name, downloads } = link;
+
+    // Si las descargas son iguales a 1 => eliminar el enlace y el archivo
+    if (downloads === 1) {
+        
+        // Eliminar el archivo
+        req.file = name;
+
+        // Eliminar el enlace    
+        await Link.findOneAndRemove(req.params.url);
+        
+        next() 
+    }
     
-    res.json(link);
+    // Si las descargas son iguales > 1 => restar 1 a las descargas y guardar el enlace
+    if (link.downloads > 1) {
+        link.downloads--;
+        await link.save();
+        res.json({ file: link.name });
+    }
 };
