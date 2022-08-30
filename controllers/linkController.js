@@ -12,13 +12,13 @@ export const createLink = async (req, res, next) => {
     }
 
     // Obtener el nombre del archivo
-    const { original_name } = req.body;
+    const { original_name, name } = req.body;
     
     // Crear un objeto de enlace
     const link = new Link();
     
     link.url = shortid.generate();
-    link.name = shortid.generate();
+    link.name = name;
     link.original_name = original_name;    
     
     // Si el usuario está autenticado
@@ -49,6 +49,16 @@ export const createLink = async (req, res, next) => {
     }
 };
 
+// Obtener todos los enlaces
+export const getAllLinks = async (req, res) => {
+    try {
+        const links = await Link.find().select('url -_id');
+        res.json(links);
+    } catch (error) {
+        console.log(error);
+    }
+}
+
 // Obtener el enlace
 export const getLink = async (req, res, next) => {
 
@@ -62,25 +72,50 @@ export const getLink = async (req, res, next) => {
         return next();
     }
 
-    // Si el enlace existe
-    const { name, downloads } = link;
+    res.json({ file: link.name, password: false });
+    
+    next();
+};
 
-    // Si las descargas son iguales a 1 => eliminar el enlace y el archivo
-    if (downloads === 1) {
-        
-        // Eliminar el archivo
-        req.file = name;
+// Retorna si el enlace tiene password
+export const hasPassword = async (req, res, next) => {
+    
+    const { url } = req.params;
 
-        // Eliminar el enlace    
-        await Link.findOneAndRemove(req.params.url);
-        
-        next() 
+    const link = await Link.findOne({ url });
+
+    if (!link) {
+        res.status(404).json({ message: "El enlace no existe"})
+        return next();
+    }
+
+    if (link.password) {
+        return res.json({ password: true, link: link.url })
+    }
+
+    next();
+}
+
+// Verificar la contraseña
+export const verifyPassword = async (req, res, next) => {
+    const { url } = req.params
+    const { password } = req.body
+
+    // Consultar por el enlace
+    const link = await Link.findOne({ url })
+
+    if (!link) {
+        res.status(404).json({ message: "El enlace no existe"})
+        return next();
+    }
+
+    if (bcrypt.compareSync(password, link.password)) {
+        // Permitirle descargar el archivo
+        next();
+    } else {
+        return res.status(401).json({ message: 'Contraseña incorrecto' })
     }
     
-    // Si las descargas son iguales > 1 => restar 1 a las descargas y guardar el enlace
-    if (link.downloads > 1) {
-        link.downloads--;
-        await link.save();
-        res.json({ file: link.name });
-    }
-};
+
+    res.json({ message: 'Verificando...'})
+}

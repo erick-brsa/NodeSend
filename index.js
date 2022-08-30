@@ -11,7 +11,11 @@ import fileRoutes from './routes/fileRoutes.js';
 const app = express();
 
 app.use(express.json());
+
 dotenv.config();
+
+// Habilitar carpeta pública
+app.use(express.static('uploads'))
 
 // Conectar a la base de datos
 connectDB();
@@ -20,6 +24,7 @@ connectDB();
 const corsOptions = {
     origin: process.env.FRONTEND_URL
 }
+
 app.use(cors(corsOptions))
 
 // Rutas de la app
